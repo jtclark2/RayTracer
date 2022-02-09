@@ -50,29 +50,39 @@ find the viewport value at each pixel index.
 
 
 double hit_sphere(const point3& center, double radius, const ray& r) {
-	// Solve for t
-	// dir^2*t^2 + 2*dir*(pt - Center) + dot(pt-center, pt-center)-r^2 = 0
+	// Purpose: Check if/where an intersection occurs
+	// I'm going to include a quick-ish derivation as well...
+	// Equation for a sphere of radius r, centered at C: 
+	//      (x-Cx)^2 + (y-Cy)^2 + (z-Cz)^2 = r2
+	// Let vector P = (x,y,z)
+	//      (Px-Cx)^2 + (Py-Cy)^2 + (Pz-Cz)^2 = r2
+	// Simplify with the dot product (We'll use `.` for dot product, A*B = Ax*Bx + Ay.by + Az.Bz)
+	//      (P-C).(P-C) = r^2
+	// Substitute our slope/intercept form (or origin/dir, since that's how we've defined a ray)
+	// for P = A + t*b 
+	//      (origin+t*dir-C).(origin+t*dir-C)=r^2
+	// Rearrange terms to get into quadratic form A*t^2 + b*t + c = 0:
+	//      dir.dir*t^2 + 2*dir.(origin - Center)*t + (origin-center).(origin-center)-r^2 = 0
 	// Quadratic formula: t = ( -b +/- sqrt(b^2 - 4ac) ) / (2ac)
-	// Simplify a bit further...we don't need the solution, just whether or
-	// not there is one. If the value in the sqrt > 0, then the answers are
-	// real. 
-	// Technically == 0 also gives us a value, but it's right on the edge, whic
-	// isn't a concern, since that's negligably small with float/double anyways
+	// We can implement from here, but a few slight simplifications (arguably) make the code cleaner
+	//		- Replace dir.dir with length_squared(dir)
+	//      - Let helf_b = b/2. Since there is a 2 in our expression, this cancels out nicely, and removes
+	//      all the extra 2's and 4's from the math -> t = ( -half_b +/- sqrt(half_b^2 - ac) ) / (ac)
+	// If the part under the sqrt (called the discriminant) > 0, then the solution is a real number, 
+	// and the meaing the ray intersects the sphere. There are two solutions +/-,
+	// representing the ray entering and exiting the sphere
 
 	vec3 oc = r.origin() - center;
-	auto a = dot(r.direction(), r.direction());
-	auto b = 2.0 * dot(oc, r.direction());
-	auto c = dot(oc, oc) - radius*radius;
-	auto discriminant = b*b - 4*a*c; // the part of the quadratic formula under the sqrt()
-
-	//std::cerr << "origin: " << r.origin() << " center: " << center <<  "ray at z=-1: " << r.<<  disc: " << discriminant << "\n";
-	//return (discriminant > 0);
+	auto a = r.direction().length_squared();
+	auto half_b = dot(oc, r.direction());
+	auto c = oc.length_squared() - radius*radius;
+	auto discriminant = half_b*half_b - a*c; // the part of the quadratic formula under the sqrt()
 
 	if (discriminant < 0) { // meaning sphere is hit
 		return -1.0;
 	}
 	else {
-		return (-b - sqrt(discriminant)) / (2.0*a); // one solution for quadratic. We're ignoring the other sign...for now.
+		return (-half_b - sqrt(discriminant)) / (a); // one solution for quadratic. We're ignoring the other sign...for now.
 	}
 }
 
