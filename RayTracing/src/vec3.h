@@ -99,7 +99,11 @@ inline vec3 operator*(const vec3 &v, double t) {
 	return t * v; // uses definition above
 }
 
-inline vec3 operator/(vec3 &v, double t) {
+
+// TODO: Figure out why this one isn't passed as ref...
+// Initially I made it a ref, since everything else was, but it throws an error
+// When I look back at the tutorial, this one is not a reference...why not???
+inline vec3 operator/(vec3 v, double t) {
 	return (1 / t) * v;
 }
 

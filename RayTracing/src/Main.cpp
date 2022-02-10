@@ -44,60 +44,65 @@ find the viewport value at each pixel index.
 
 #include <iostream>
 
-#include "ray.h"
+#include "rtweekend.h"
+//#include "ray.h"
+//#include "vec3.h"
 #include "color.h"
-#include "vec3.h"
+#include "hittable_list.h"
+#include "sphere.h"
 
 
-double hit_sphere(const point3& center, double radius, const ray& r) {
-	// Purpose: Check if/where an intersection occurs
-	// I'm going to include a quick-ish derivation as well...
-	// Equation for a sphere of radius r, centered at C: 
-	//      (x-Cx)^2 + (y-Cy)^2 + (z-Cz)^2 = r2
-	// Let vector P = (x,y,z)
-	//      (Px-Cx)^2 + (Py-Cy)^2 + (Pz-Cz)^2 = r2
-	// Simplify with the dot product (We'll use `.` for dot product, A*B = Ax*Bx + Ay.by + Az.Bz)
-	//      (P-C).(P-C) = r^2
-	// Substitute our slope/intercept form (or origin/dir, since that's how we've defined a ray)
-	// for P = A + t*b 
-	//      (origin+t*dir-C).(origin+t*dir-C)=r^2
-	// Rearrange terms to get into quadratic form A*t^2 + b*t + c = 0:
-	//      dir.dir*t^2 + 2*dir.(origin - Center)*t + (origin-center).(origin-center)-r^2 = 0
-	// Quadratic formula: t = ( -b +/- sqrt(b^2 - 4ac) ) / (2ac)
-	// We can implement from here, but a few slight simplifications (arguably) make the code cleaner
-	//		- Replace dir.dir with length_squared(dir)
-	//      - Let helf_b = b/2. Since there is a 2 in our expression, this cancels out nicely, and removes
-	//      all the extra 2's and 4's from the math -> t = ( -half_b +/- sqrt(half_b^2 - ac) ) / (ac)
-	// If the part under the sqrt (called the discriminant) > 0, then the solution is a real number, 
-	// and the meaing the ray intersects the sphere. There are two solutions +/-,
-	// representing the ray entering and exiting the sphere
+//double hit_sphere(const point3& center, double radius, const ray& r) {
+//	// Purpose: Check if/where an intersection occurs
+//	// I'm going to include a quick-ish derivation as well...
+//	// Equation for a sphere of radius r, centered at C: 
+//	//      (x-Cx)^2 + (y-Cy)^2 + (z-Cz)^2 = r2
+//	// Let vector P = (x,y,z)
+//	//      (Px-Cx)^2 + (Py-Cy)^2 + (Pz-Cz)^2 = r2
+//	// Simplify with the dot product (We'll use `.` for dot product, A*B = Ax*Bx + Ay.by + Az.Bz)
+//	//      (P-C).(P-C) = r^2
+//	// Substitute our slope/intercept form (or origin/dir, since that's how we've defined a ray)
+//	// for P = A + t*b 
+//	//      (origin+t*dir-C).(origin+t*dir-C)=r^2
+//	// Rearrange terms to get into quadratic form A*t^2 + b*t + c = 0:
+//	//      dir.dir*t^2 + 2*dir.(origin - Center)*t + (origin-center).(origin-center)-r^2 = 0
+//	// Quadratic formula: t = ( -b +/- sqrt(b^2 - 4ac) ) / (2ac)
+//	// We can implement from here, but a few slight simplifications (arguably) make the code cleaner
+//	//		- Replace dir.dir with length_squared(dir)
+//	//      - Let helf_b = b/2. Since there is a 2 in our expression, this cancels out nicely, and removes
+//	//      all the extra 2's and 4's from the math -> t = ( -half_b +/- sqrt(half_b^2 - ac) ) / (ac)
+//	// If the part under the sqrt (called the discriminant) > 0, then the solution is a real number, 
+//	// and the meaing the ray intersects the sphere. There are two solutions +/-,
+//	// representing the ray entering and exiting the sphere
+//
+//	vec3 oc = r.origin() - center;
+//	auto a = r.direction().length_squared();
+//	auto half_b = dot(oc, r.direction());
+//	auto c = oc.length_squared() - radius*radius;
+//	auto discriminant = half_b*half_b - a*c; // the part of the quadratic formula under the sqrt()
+//
+//	if (discriminant < 0) { // meaning sphere is hit
+//		return -1.0;
+//	}
+//	else {
+//		return (-half_b - sqrt(discriminant)) / (a); // one solution for quadratic. We're ignoring the other sign...for now.
+//	}
+//}
 
-	vec3 oc = r.origin() - center;
-	auto a = r.direction().length_squared();
-	auto half_b = dot(oc, r.direction());
-	auto c = oc.length_squared() - radius*radius;
-	auto discriminant = half_b*half_b - a*c; // the part of the quadratic formula under the sqrt()
-
-	if (discriminant < 0) { // meaning sphere is hit
-		return -1.0;
-	}
-	else {
-		return (-half_b - sqrt(discriminant)) / (a); // one solution for quadratic. We're ignoring the other sign...for now.
-	}
-}
-
-color ray_color(const ray& r) {
-	auto hit = hit_sphere(point3(0, 0, -1), 0.5, r);
-	if (hit > 0.0) { // sphere at0,0,-1; radius=0.5, and we pass the ray to check for intersection
-		vec3 N = unit_vector(r.at(hit) - vec3(0, 0, -1));
-		return 0.5*color(N.x() + 1, N.y() + 1, N.z() + 1); // (x+1)*.5 shifts -1 -> 1 distribution to 0 -> 1 
+color ray_color(const ray& r, const hittable& world) {
+	hit_record rec;
+	//auto hit = hit_sphere(point3(0, 0, -1), 0.5, r);
+	if (world.hit(r, 0, infinity, rec)) { // sphere at0,0,-1; radius=0.5, and we pass the ray to check for intersection
+		//vec3 N = unit_vector(r.at(hit) - vec3(0, 0, -1));
+		//return 0.5*color(N.x() + 1, N.y() + 1, N.z() + 1); // (x+1)*.5 shifts -1 -> 1 distribution to 0 -> 1 
+		return 0.5 *  (rec.normal + color(1, 1, 1)); // still just a representation of the normal (not a real physics based reflection)
 		//return color(1, 0, 0); // red sphere
 	}
 
 	// Create background/horizon (blue to white fade)
 	vec3 unit_direction = unit_vector(r.direction());
 	// ensure 0-1, since direction magnitudes range: -1 to 1
-	hit = 0.5*(unit_direction.y() + 1.0);
+	auto hit = 0.5*(unit_direction.y() + 1.0);
 	// Linear Interpolation (LERP) between white(1,1,1), and blue(0.5,0.7,1.0)
 	return (1.0 - hit) * color(1.0, 1.0, 1.0) + hit * color(0.5, 0.7, 1.0);
 }
@@ -105,7 +110,10 @@ color ray_color(const ray& r) {
 int main() {
 
 
-
+	// World
+	hittable_list world; // all objects that rays can interact with in the scene (visible stuff)
+	world.add(make_shared<sphere>(point3(0, 0, -1), 0.5));
+	world.add(make_shared<sphere>(point3(0, -100.5, -1), 100));
 
 	// Image
 	const auto aspect_ratio = 16.0 / 9.0;
@@ -143,7 +151,7 @@ int main() {
 			//		- I think we're assuming dist to target is 1, which is why this works...there are some issues with
 			//		that, but there's lots of tutorial to go
 			ray r(origin, lower_left_corner + u * horizontal + v * vertical - origin);
-			color pixel_color = ray_color(r);
+			color pixel_color = ray_color(r, world);
 			write_color(std::cout, pixel_color);
 
 			// Commented version does not use color or vec3 libraries
