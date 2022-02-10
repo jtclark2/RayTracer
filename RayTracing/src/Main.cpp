@@ -50,44 +50,8 @@ find the viewport value at each pixel index.
 #include "color.h"
 #include "hittable_list.h"
 #include "sphere.h"
+#include "camera.h"
 
-
-//double hit_sphere(const point3& center, double radius, const ray& r) {
-//	// Purpose: Check if/where an intersection occurs
-//	// I'm going to include a quick-ish derivation as well...
-//	// Equation for a sphere of radius r, centered at C: 
-//	//      (x-Cx)^2 + (y-Cy)^2 + (z-Cz)^2 = r2
-//	// Let vector P = (x,y,z)
-//	//      (Px-Cx)^2 + (Py-Cy)^2 + (Pz-Cz)^2 = r2
-//	// Simplify with the dot product (We'll use `.` for dot product, A*B = Ax*Bx + Ay.by + Az.Bz)
-//	//      (P-C).(P-C) = r^2
-//	// Substitute our slope/intercept form (or origin/dir, since that's how we've defined a ray)
-//	// for P = A + t*b 
-//	//      (origin+t*dir-C).(origin+t*dir-C)=r^2
-//	// Rearrange terms to get into quadratic form A*t^2 + b*t + c = 0:
-//	//      dir.dir*t^2 + 2*dir.(origin - Center)*t + (origin-center).(origin-center)-r^2 = 0
-//	// Quadratic formula: t = ( -b +/- sqrt(b^2 - 4ac) ) / (2ac)
-//	// We can implement from here, but a few slight simplifications (arguably) make the code cleaner
-//	//		- Replace dir.dir with length_squared(dir)
-//	//      - Let helf_b = b/2. Since there is a 2 in our expression, this cancels out nicely, and removes
-//	//      all the extra 2's and 4's from the math -> t = ( -half_b +/- sqrt(half_b^2 - ac) ) / (ac)
-//	// If the part under the sqrt (called the discriminant) > 0, then the solution is a real number, 
-//	// and the meaing the ray intersects the sphere. There are two solutions +/-,
-//	// representing the ray entering and exiting the sphere
-//
-//	vec3 oc = r.origin() - center;
-//	auto a = r.direction().length_squared();
-//	auto half_b = dot(oc, r.direction());
-//	auto c = oc.length_squared() - radius*radius;
-//	auto discriminant = half_b*half_b - a*c; // the part of the quadratic formula under the sqrt()
-//
-//	if (discriminant < 0) { // meaning sphere is hit
-//		return -1.0;
-//	}
-//	else {
-//		return (-half_b - sqrt(discriminant)) / (a); // one solution for quadratic. We're ignoring the other sign...for now.
-//	}
-//}
 
 color ray_color(const ray& r, const hittable& world) {
 	hit_record rec;
@@ -116,20 +80,22 @@ int main() {
 	world.add(make_shared<sphere>(point3(0, -100.5, -1), 100));
 
 	// Image
-	const auto aspect_ratio = 16.0 / 9.0;
+	const auto aspect_ratio = 16.0 / 9.0; // TODO: we seem to have this hardcoded here and in the camera
 	const int image_width = 400;
 	const int image_height = static_cast<int>(image_width / aspect_ratio);
+	const int samples_per_pixel = 100; // Seems like a lot...we're going to slow down 100x
 
 	// Camera
-	auto viewport_height = 2.0;
-	auto viewport_width = aspect_ratio * viewport_height;
-	auto focal_length = 1.0;
+	camera cam;
+	//auto viewport_height = 2.0;
+	//auto viewport_width = aspect_ratio * viewport_height;
+	//auto focal_length = 1.0;
 
-	auto origin = point3(0, 0, 0); // location of camera (which is also where rays come from)
-	auto horizontal = vec3(viewport_width, 0, 0);
-	auto vertical = vec3(0, viewport_height, 0);
-	//auto lower_left_corner = origin - horizontal / 2 - vertical / 2 - vec3(0, 0, focal_length);
-	auto lower_left_corner = origin - vec3(viewport_width/2, viewport_height/2, focal_length);
+	//auto origin = point3(0, 0, 0); // location of camera (which is also where rays come from)
+	//auto horizontal = vec3(viewport_width, 0, 0);
+	//auto vertical = vec3(0, viewport_height, 0);
+	////auto lower_left_corner = origin - horizontal / 2 - vertical / 2 - vec3(0, 0, focal_length);
+	//auto lower_left_corner = origin - vec3(viewport_width/2, viewport_height/2, focal_length);
 
 	// Render
 	std::cout << "P3\n" << image_width << ' ' << image_height << "\n255\n";
@@ -138,30 +104,14 @@ int main() {
 	for (int j = image_height - 1; j >= 0; --j) {
 		std::cerr << "\rScanlines remaining: " << j  << " of " << image_height << " " << std::flush;
 		for (int i = 0; i < image_width; ++i) {
-			auto u = double(i) / (image_width - 1); 
-			auto v = double(j) / (image_height - 1); // TODO: minor optimization: move this to outer loop
-			// This was just a sample image, creating a blended rainbow color picker table
-			//color pixel_color(double(i) / (image_width - 1), double(j) / (image_height - 1), 0.25);
-
-			// This could be optimized (most these multiplications only apply to 1 element of the vec3
-			// Rays come from:
-			//	r.origin : local is also called origin - basically the center of our camera/projection surface):
-			//	r.direction: from lower_left (most negative point in both x,y FOV, then iterate through the entire FOV,
-			//		spanning the entire vertical and horizontal.
-			//		- I think we're assuming dist to target is 1, which is why this works...there are some issues with
-			//		that, but there's lots of tutorial to go
-			ray r(origin, lower_left_corner + u * horizontal + v * vertical - origin);
-			color pixel_color = ray_color(r, world);
-			write_color(std::cout, pixel_color);
-
-			// Commented version does not use color or vec3 libraries
-			//auto r = double(i) / (image_width - 1);
-			//auto g = double(j) / (image_height - 1);S
-			//auto b = 0.25;
-			//int ir = static_cast<int>(255.999 * r);
-			//int ig = static_cast<int>(255.999 * g);
-			//int ib = static_cast<int>(255.999 * b);
-			//std::cout << ir << ' ' << ig << ' ' << ib << '\n';
+			color pixel_color(0, 0, 0);
+			for (int s = 0; s < samples_per_pixel; ++s) {
+				auto v = (j + random_double()) / (image_height - 1);
+				auto u = (i + random_double()) / (image_width - 1);
+				ray r = cam.get_ray(u, v);
+				pixel_color += ray_color(r, world);
+			}
+			write_color(std::cout, pixel_color, samples_per_pixel);
 		}
 	}
 

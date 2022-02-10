@@ -1,5 +1,5 @@
 # RayTracingWeekend
-[Follow along with Peter Shirley's Guide](https://raytracing.github.io/books/RayTracingInOneWeekend.html#overview)
+[_Ray Tracing in One Weekend_](https://raytracing.github.io/books/RayTracingInOneWeekend.html)
 
 # Status
 Just finished section 4.
