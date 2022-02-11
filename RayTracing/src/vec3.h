@@ -167,3 +167,29 @@ vec3 random_in_hemisphere(const vec3& normal) {
 vec3 reflect(const vec3& v, const vec3& n) {
 	return v - 2 * dot(v, n)*n;
 }
+
+
+vec3 refract(const vec3& uv, const vec3& n, double etai_over_etat) {
+	// This method basically computes snell's law, though a little re-arranging has been done
+	// I'm going to use n = eta (even though technically eta is a greek letter that just looks like an n)
+	// Snell's Law: n*sin(theta)=n'*sin(theta') 
+	// Recall: |a|*|b|*cos(theta) = dot(a, b)
+	// Use some trig properties to swap the sin for cos, and re-arrange with algrebra...you can end up with
+	// expression for both components of the refracted ray:
+	// r_out_perp is perpendicular to the normal
+	// r_out_parallel is parallel to the normal
+	//
+	// Inputs:
+	//	- etai_over_etat can be thought of as: eta I / eta T, the ratio of the two indexes of refraction
+	//  - n: The normal to the surface of interaction
+	//  - uv: direction vector of the the incoming ray
+	//
+	// Return:
+	//  - refracted ray
+	// where eta is the greek letter that looks like n, used in snell's law of refaction
+	auto cos_theta = fmin(dot(-uv, n), 1.0);
+	vec3 r_out_perp = etai_over_etat * (uv + cos_theta * n);
+	vec3 r_out_parallel = -sqrt(fabs(1.0 - r_out_perp.length_squared())) * n;
+	return r_out_perp + r_out_parallel;
+
+}
