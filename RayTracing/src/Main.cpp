@@ -53,13 +53,69 @@ find the viewport value at each pixel index.
 #include "camera.h"
 
 
-color ray_color(const ray& r, const hittable& world) {
+/*
+As a physics major, I'm amazed how well this simple model is working, despite a lot of assumptions, and missing elemnents.
+This author's done a great job so far, so I'm sure we're getting to at least some of these, but here's a few
+thoughts for improvement, just in case:
+1) We have no light sources. This was confusing to me at first. Rather than light, we just return the background when we
+don't hit anything. I guess this is kind of like a foggy day, when looking any direction is just the same brightness, 
+with no apparent source/direction to the light. It's basically all secondary scattering...Kind of a cool work around.
+2) ray tracing is expensive: Why not turn down the sample count, record you first contact object, creating a
+	mask, and smoothing within that mask...
+	- OK, for a "perfect" render, this model is simpler, and more accurate, but the CPU time is getting a
+	bit crazy (maybe not too bad with shaders, but I imagine you would want to process as many objects as
+	possible, and some large/realistic scenes (I'm talking modern triangles, not just spheres) could have
+	many objects, and potentially high frame rates
+		- You could blur on secondary objects too, but I'm not sure that would really be needed
+		- Not sure if it's worth it, but you could also blur in a scaled space...I don't have my intuition,
+		so I'm just throwing ideas around, but converting to RMS / log / exp space and then blurring might be interesting.
+		The main effect would be how much you let anomalous pixels pull their surroundings, rather than getting 
+		pulled in.
+		- Also, why used random rays? Would sub-pixel rays for interpolated contributions make more sense?
+			- You could get more even distribution
+			- You could re-uses a weighted contribution of each ray on the 4 pixels whose centers it would be between
+3) I'm sure we'll get to more reflective surfaces...curious how we'll approach those
+	- If we got really deep, we might address the changes to light as reflections approach 90 degrees off of the normal
+		- The light becomes polarized (which probably doesn't matter in 99% of simulations, though lots of 
+		modern glass/windows will never look quite right)
+		- I'm pretty sure it also loses saturation. I understand why it wouldn't be in this tutorial, but 
+		a bright room, with direct sunlight should get hotspots, and change in color on reflective surfaces
+4) I peaked ahead, so I know we'll be dealing with transparent objects
+	- Will they be pure transparent models, or include translucent scattered (which could be done with pure ray
+	tracer, or more computationally efficient with a skin depth model)
+
+*/
+color ray_color(const ray& r, const hittable& world, int depth) {
+	if (depth <= 0)
+		return  color(0, 0, 0);
+
 	hit_record rec;
-	//auto hit = hit_sphere(point3(0, 0, -1), 0.5, r);
-	if (world.hit(r, 0, infinity, rec)) { // sphere at0,0,-1; radius=0.5, and we pass the ray to check for intersection
+
+	// Pretty sure this is gamma...tutorial kind of gave a magic number, but my understanding is that gamma is an 
+	// absorbtion factor, which is what this effectively is (higher value --> more reflection --> brighter object and slightly brighter scene from reflected light)
+	// TODO: Consider making this a material property, rather than hard-coded like this
+	const double GAMMA = 0.5;
+
+	// limit lower end of range to avoid floating a reflected ray hitting the spot it reflected off of...
+	// This is a bug that can occur because of floating point precision. You start the ray where the last one collided,
+	// but that could be +/-0.0000000000000000001 (or however many 0's). Then the ray could technically be inside the sphere
+	// when it's created. This happens a lot, causing a speckling problem, called "shadow acne". This impact is way bigger than
+	// I expected. Without this fix, repeated reflection were slowing the render down a ton (I think most rays would reflect once or twice,
+	// but must have ended up reflecting max_depth times because of this). Also, the "acne" is very pronounced. It looked very noisy. 
+	// I'm very glad the tutorial pointed this out, because it would have taken me forever to find this one!
+	if (world.hit(r, 0.001, infinity, rec)) { 
+
+		// Option 1: I'm going to stick with this for now...though the two seem identical to my eye...maybe that will change with other materials
+		point3 target = rec.p + rec.normal + random_unit_vector(); // random ray coming off of target pointing towards random point in the unit sphere
+		// Option 2: Very similar render (I can't tell the difference (look up Lambertian Diffuse)
+		//point3 target = rec.p + random_in_hemisphere(rec.normal);
+		return GAMMA * ray_color(ray(rec.p, target - rec.p), world, depth - 1);
+
 		//vec3 N = unit_vector(r.at(hit) - vec3(0, 0, -1));
 		//return 0.5*color(N.x() + 1, N.y() + 1, N.z() + 1); // (x+1)*.5 shifts -1 -> 1 distribution to 0 -> 1 
-		return 0.5 *  (rec.normal + color(1, 1, 1)); // still just a representation of the normal (not a real physics based reflection)
+
+		//return 0.5 *  (rec.normal + color(1, 1, 1)); // still just a representation of the normal (not a real physics based reflection)
+		
 		//return color(1, 0, 0); // red sphere
 	}
 
@@ -83,7 +139,8 @@ int main() {
 	const auto aspect_ratio = 16.0 / 9.0; // TODO: we seem to have this hardcoded here and in the camera
 	const int image_width = 400;
 	const int image_height = static_cast<int>(image_width / aspect_ratio);
-	const int samples_per_pixel = 100; // Seems like a lot...we're going to slow down 100x
+	const int samples_per_pixel = 100;
+	const int max_depth = 5;
 
 	// Camera
 	camera cam;
@@ -109,7 +166,7 @@ int main() {
 				auto v = (j + random_double()) / (image_height - 1);
 				auto u = (i + random_double()) / (image_width - 1);
 				ray r = cam.get_ray(u, v);
-				pixel_color += ray_color(r, world);
+				pixel_color += ray_color(r, world, max_depth);
 			}
 			write_color(std::cout, pixel_color, samples_per_pixel);
 		}
