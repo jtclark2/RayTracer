@@ -1,6 +1,10 @@
 #pragma once
 
+#include "rtweekend.h"
 #include "ray.h"
+
+class material;
+
 
 // We can choose a convention to use to define our normal (there are multiple valid options)
 // This is important any time a surface has different behavior for rays hitting from different
@@ -20,10 +24,10 @@
 //	Advantages: We calculate the side impacted when we detect the intersect, and record immediately
 //  If I want to extend this to process triangles/surfaces, then there won't be a clear in/out, so 
 //  this more explicit convention might be nice...though either way could work
-
 struct hit_record {
 	point3 p;
 	vec3 normal;
+	shared_ptr<material> mat_ptr;
 	double t;
 	bool front_face;
 

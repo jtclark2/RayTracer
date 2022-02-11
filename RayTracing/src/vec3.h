@@ -57,6 +57,12 @@ public:
 		return sqrt(length_squared());
 	}
 
+	bool near_zero() const {
+		// Return true if the vector is close to zero in every dimension
+		const auto small = 1e-8; // Threhsold for a small number
+		return (fabs(e[0]) < small) && (fabs(e[1]) < small) && (fabs(e[2]) < small);
+	}
+
 	// This is actually redundant, since we define dot down below, which is a more general form
 	// Leaving for consistency
 	double length_squared() const {
@@ -156,4 +162,8 @@ vec3 random_in_hemisphere(const vec3& normal) {
 		return in_unit_sphere;
 	else
 		return -in_unit_sphere;
+}
+
+vec3 reflect(const vec3& v, const vec3& n) {
+	return v - 2 * dot(v, n)*n;
 }

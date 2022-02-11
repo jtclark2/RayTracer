@@ -51,7 +51,7 @@ find the viewport value at each pixel index.
 #include "hittable_list.h"
 #include "sphere.h"
 #include "camera.h"
-
+#include "material.h"
 
 /*
 As a physics major, I'm amazed how well this simple model is working, despite a lot of assumptions, and missing elemnents.
@@ -91,11 +91,6 @@ color ray_color(const ray& r, const hittable& world, int depth) {
 
 	hit_record rec;
 
-	// Pretty sure this is gamma...tutorial kind of gave a magic number, but my understanding is that gamma is an 
-	// absorbtion factor, which is what this effectively is (higher value --> more reflection --> brighter object and slightly brighter scene from reflected light)
-	// TODO: Consider making this a material property, rather than hard-coded like this
-	const double GAMMA = 0.5;
-
 	// limit lower end of range to avoid floating a reflected ray hitting the spot it reflected off of...
 	// This is a bug that can occur because of floating point precision. You start the ray where the last one collided,
 	// but that could be +/-0.0000000000000000001 (or however many 0's). Then the ray could technically be inside the sphere
@@ -104,12 +99,18 @@ color ray_color(const ray& r, const hittable& world, int depth) {
 	// but must have ended up reflecting max_depth times because of this). Also, the "acne" is very pronounced. It looked very noisy. 
 	// I'm very glad the tutorial pointed this out, because it would have taken me forever to find this one!
 	if (world.hit(r, 0.001, infinity, rec)) { 
+		ray scattered;
+		color attenuation;
+		if (rec.mat_ptr->scatter(r, rec, attenuation, scattered))
+			return attenuation * ray_color(scattered, world, depth - 1);
+		return color(0, 0, 0);
 
-		// Option 1: I'm going to stick with this for now...though the two seem identical to my eye...maybe that will change with other materials
-		point3 target = rec.p + rec.normal + random_unit_vector(); // random ray coming off of target pointing towards random point in the unit sphere
-		// Option 2: Very similar render (I can't tell the difference (look up Lambertian Diffuse)
-		//point3 target = rec.p + random_in_hemisphere(rec.normal);
-		return GAMMA * ray_color(ray(rec.p, target - rec.p), world, depth - 1);
+		//// Lambertian reflection off of diffuse surfaces (2 options with very similar effects...to my eye at least)
+		//// Option 1: using this for now...seems closest to my understanding after reading the wiki
+		//point3 target = rec.p + rec.normal + random_unit_vector(); // random ray coming off of target pointing towards random point in the unit sphere
+		//// Option 2: Very similar render (I can't tell the difference (look up Lambertian Diffuse)
+		////point3 target = rec.p + random_in_hemisphere(rec.normal);
+		//return GAMMA * ray_color(ray(rec.p, target - rec.p), world, depth - 1);
 
 		//vec3 N = unit_vector(r.at(hit) - vec3(0, 0, -1));
 		//return 0.5*color(N.x() + 1, N.y() + 1, N.z() + 1); // (x+1)*.5 shifts -1 -> 1 distribution to 0 -> 1 
@@ -129,11 +130,19 @@ color ray_color(const ray& r, const hittable& world, int depth) {
 
 int main() {
 
-
 	// World
 	hittable_list world; // all objects that rays can interact with in the scene (visible stuff)
-	world.add(make_shared<sphere>(point3(0, 0, -1), 0.5));
-	world.add(make_shared<sphere>(point3(0, -100.5, -1), 100));
+
+	auto material_ground = make_shared<lambertian>(color(0.8, 0.8, 0.0));
+	auto material_center = make_shared<lambertian>(color(0.7, 0.3, 0.3));
+	auto material_left = make_shared<metal>(color(0.8, 0.8, 0.8));
+	auto material_right = make_shared<metal>(color(0.8, 0.6, 0.2));
+
+	world.add(make_shared<sphere>(point3(0, -100.5, -1), 100, material_ground));
+	world.add(make_shared<sphere>(point3(0, 0, -1), 0.5, material_center));
+	world.add(make_shared<sphere>(point3(-1, 0, -1), 0.5, material_left));
+	world.add(make_shared<sphere>(point3(1, 0, -1), 0.5, material_right));
+
 
 	// Image
 	const auto aspect_ratio = 16.0 / 9.0; // TODO: we seem to have this hardcoded here and in the camera
@@ -144,15 +153,6 @@ int main() {
 
 	// Camera
 	camera cam;
-	//auto viewport_height = 2.0;
-	//auto viewport_width = aspect_ratio * viewport_height;
-	//auto focal_length = 1.0;
-
-	//auto origin = point3(0, 0, 0); // location of camera (which is also where rays come from)
-	//auto horizontal = vec3(viewport_width, 0, 0);
-	//auto vertical = vec3(0, viewport_height, 0);
-	////auto lower_left_corner = origin - horizontal / 2 - vertical / 2 - vec3(0, 0, focal_length);
-	//auto lower_left_corner = origin - vec3(viewport_width/2, viewport_height/2, focal_length);
 
 	// Render
 	std::cout << "P3\n" << image_width << ' ' << image_height << "\n255\n";
