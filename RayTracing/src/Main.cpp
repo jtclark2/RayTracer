@@ -151,19 +151,21 @@ int main() {
 	world.add(make_shared<sphere>(point3(-1.0, 0.0, -1.0), -0.4, material_left));
 	world.add(make_shared<sphere>(point3(1.0, 0.0, -1.0), 0.5, material_right));
 
-
-	///////////////// Camera/Image /////////////////
+	///////////////// Image /////////////////
 	const auto aspect_ratio = 16.0 / 9.0;
-	const int image_width = 400;
+	const int image_width = 200;
 	const int image_height = static_cast<int>(image_width / aspect_ratio);
-	const int samples_per_pixel = 10;
+	const int samples_per_pixel = 100;
 	const int max_depth = 10;
 
-	point3 cam_pos = point3(-2, 2, 1);
-	point3 cam_target = point3(0, 0, -1);
-	vec3 vertical_orientation = vec3(0, 1, 0); // (0,1,0) is world up
-	double fov_deg = 90;
-	camera cam(point3(-2,2,1), point3(0,0,-1), vec3(0,1,0), 90, aspect_ratio);
+	///////////////// Camera /////////////////
+	point3 lookfrom(3, 3, 2);
+	point3 lookat(0, 0, -1);
+	vec3 vup = vec3(0, 1, 0); // (0,1,0) is world up
+	double fov_deg = 20;
+	auto dist_to_focus = (lookfrom - lookat).length(); // Move inside the function?
+	auto aperture = 2.0; // 1 would be perfect focus?
+	camera cam(lookfrom, lookat, vup, fov_deg, aspect_ratio, aperture, dist_to_focus);
 
 	///////////////// Render /////////////////
 	std::cout << "P3\n" << image_width << ' ' << image_height << "\n255\n";
@@ -174,12 +176,29 @@ int main() {
 		for (int i = 0; i < image_width; ++i) {
 			color pixel_color(0, 0, 0);
 			for (int s = 0; s < samples_per_pixel; ++s) {
-				auto v = (j + random_double()) / (image_height - 1);
-				auto u = (i + random_double()) / (image_width - 1);
+				// technically, adding the random_double is just a blur effect...
+				// It just happens to be a sub-pixel blur, which counter-acts aliasing
+				auto v = (j + random_double()) / (image_height - 1.);
+				auto u = (i + random_double()) / (image_width - 1.);
 				ray r = cam.get_ray(u, v);
 				pixel_color += ray_color(r, world, max_depth);
 			}
 			write_color(std::cout, pixel_color, samples_per_pixel);
+
+			//// Alternate sampling approach - interpolated, rather than random...arguably yields
+			//// better results for lower samples_per_pixel...neglable difference really, but 
+			//// I kind of like removing randomness in this case - personal preference
+			//int sqrt_samples = (int)sqrt(samples_per_pixel);
+			//int samples_per_pixel_perfect_square = sqrt_samples * sqrt_samples;
+			//for (int s = 0; s < sqrt_samples; ++s) {
+			//	for (int t = 0; t < sqrt_samples; ++t) {
+			//		auto v = (j + s / sqrt(samples_per_pixel)) / (image_height - 1.);
+			//		auto u = (i + t / sqrt(samples_per_pixel)) / (image_width - 1.);
+			//		ray r = cam.get_ray(u, v);
+			//		pixel_color += ray_color(r, world, max_depth);
+			//	}
+			//}
+			//write_color(std::cout, pixel_color, samples_per_pixel_perfect_square);
 		}
 	}
 
