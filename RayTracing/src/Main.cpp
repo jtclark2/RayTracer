@@ -137,6 +137,8 @@ hittable_list random_scene() {
 	world.add(make_shared<sphere>(point3(0, -1000, 0), 1000, ground_material));
 
 	// Add a bunch of smaller random spheres
+	unsigned int seed = (unsigned int)time(NULL); // for videos, make sure to set explicitly (for image from tutorial, remove seed)
+	srand(seed);
 	for (int a = -11; a < 11; a++) { // position in x + rand
 		for (int b = -11; b < 11; b++) { // position in z + rand
 			auto choose_mat = random_double();
@@ -205,10 +207,10 @@ int main() {
 	//world.add(make_shared<sphere>(point3(1.0, 0.0, -1.0), 0.5, material_right));
 
 	///////////////// Image /////////////////
-	const auto aspect_ratio = 3.0 / 2.0; //16.0 / 9.0;
+	const auto aspect_ratio = 16.0 / 9.0;
 	const int image_width = 1200;
 	const int image_height = static_cast<int>(image_width / aspect_ratio);
-	const int samples_per_pixel = 1;
+	const int samples_per_pixel = 1000;
 	const int max_depth = 50;
 
 	///////////////// Camera /////////////////
@@ -226,7 +228,7 @@ int main() {
 
 	// Loop through all pixels in the image
 	for (int j = image_height - 1; j >= 0; --j) {
-		std::cerr << "\r (" << (double)(clock() - tStart) / CLOCKS_PER_SEC << ") Scanlines remaining: " << j  << " of " << image_height << " " << std::flush;
+		std::cerr << "\r (Time Taken: " << (double)(clock() - tStart) / CLOCKS_PER_SEC << ") Scanlines remaining: " << j  << " of " << image_height << " " << std::flush;
 		for (int i = 0; i < image_width; ++i) {
 			color pixel_color(0, 0, 0);
 			for (int s = 0; s < samples_per_pixel; ++s) {
@@ -237,7 +239,7 @@ int main() {
 				ray r = cam.get_ray(u, v);
 				pixel_color += ray_color(r, world, max_depth);
 			}
-			write_color(std::cout, pixel_color, samples_per_pixel);
+			write_color(std::cout, pixel_color, samples_per_pixel); // disabling for profiling (something is slowing me down)
 
 			//// Alternate sampling approach - interpolated, rather than random...arguably yields
 			//// better results for lower samples_per_pixel...neglable difference really, but 

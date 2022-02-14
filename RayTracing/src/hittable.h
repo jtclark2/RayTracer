@@ -5,7 +5,6 @@
 
 class material;
 
-
 // We can choose a convention to use to define our normal (there are multiple valid options)
 // This is important any time a surface has different behavior for rays hitting from different
 // sides. eg: 
@@ -31,9 +30,11 @@ struct hit_record {
 	double t;
 	bool front_face;
 
-	// probably using inline to optimize runtime performance
+	// The general concept here is setting which side a surface is being hit...
+	// However, the concept of 'outward' is specific to a sphere.
+	// I'm not sure if that makes this correct where it is, or more of a 
+	// sphere-specific method...I'll leave it until I add triangles
 	inline void set_face_normal(const ray& r, const vec3& outward_normal) {
-		// The most common case (ray hitting outside), results negative dot product, and -outward_normal
 		front_face = dot(r.direction(), outward_normal) < 0;
 		normal = front_face ? outward_normal : -outward_normal;
 	}
