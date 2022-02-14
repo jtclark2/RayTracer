@@ -28,8 +28,8 @@ It might be a while before I get back to this project. However, it was a lot of 
     - rename some variables 
     - refactor more content out of main (scene generation)
 - [Video output](https://learnopencv.com/read-write-and-display-a-video-using-opencv-cpp-python/)
-- More Responsive Output / Different Image format(s)
-    - Here's a very similar project
+- [More Responsive Output / Different Image format(s)](https://www.youtube.com/watch?v=mOSirVeP5lo&list=PLlrATfBNZ98f6Z1cDNeMLL3eXaRk1WCxK&index=10&t=575s&ab_channel=TheCherno)
+    - This sample uses an output format that reloads the rendered image in real-time, as it is generated
 - [Implement Triangles](https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/why-are-triangles-useful)
     - This reference may be useful, though most of the math it already there. The new class just needs to be a hittable, with a hit() method, and possibly an update to the set_face_normal, which may be sphere specific, even though it's technically in hit_record.
 - Convert to run on GPU [Here's a series to OpenGL and GPU shaders](https://www.youtube.com/watch?v=W3gAzLwfIP0&list=PLlrATfBNZ98foTJPJ_Ev03o2oq3-GGOS2&ab_channel=TheCherno)
